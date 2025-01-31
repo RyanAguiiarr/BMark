@@ -25,8 +25,13 @@ const salao = new Schema({
         pais: String,
     },
     geo: {
-        tipo: String,
-        cordinates: Array
+        type: {
+            type: String,
+            enum: ["Point"], // Garante que só aceita "Point"
+        },
+        coordinates: {
+            type: [Number], // Deve ser um array de números
+        }
     },
     dataCadastro: {
         type: Date,
