@@ -2,7 +2,9 @@
 // ARQUIVO DE CONEXÃO AO BANCO DE DADOS (MONGODB)
 
 const mongoose = require("mongoose")
-const URI = "mongodb+srv://Ryan:cucamole@bmark.kxkmu.mongodb.net/BMark?retryWrites=true&w=majority&appName=BMark"
+const dotenv = require('dotenv');
+dotenv.config({ path: '../.env' });
+const URI = process.env.URI
 
 mongoose.connect(URI).then(() => {
     console.log("conectado ao MongoBD")

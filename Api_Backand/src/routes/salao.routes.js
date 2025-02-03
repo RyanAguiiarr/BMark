@@ -1,5 +1,6 @@
 const express = require("express")
 const router = express.Router()
+const turf = require("@turf/turf")
 const Salao = require("../models/salao")
 const Servico = require("../models/servico")
 
@@ -40,6 +41,26 @@ router.get("/servicos/:salaoId", async (req, res) => {
                 value: s._id
             }))
         })
+    } catch (err) {
+        res.json({erro: true, message: err.message})
+    }
+})
+
+router.get("/:id", async (req, res) => {
+    try {
+        console.log(await Salao.findById(req.params.id))
+       const salao = await Salao.findById(req.params.id).select(
+        "capa nome endereco.cidade geo.coordinates telefone"
+    )
+
+    // CALCULO DA DISTANCIA DA LOCALIZACAO DO SALAO usando lib (TURF)
+    const distance = turf.distance(
+        turf.point(salao.geo.coordinates),
+        turf.point([-43.207, -22.901])
+    )
+
+    res.json({erro: false, salao, distance})
+
     } catch (err) {
         res.json({erro: true, message: err.message})
     }
