@@ -1,4 +1,4 @@
-const axios = require('axios');
+/*const axios = require('axios');
 const { access_token } = require('../data/keys.json'); // Pegando o token de acesso salvo no arquivo JSON
 
 const api = axios.create({
@@ -51,3 +51,4 @@ const mercadoPago = {
 };
 
 module.exports = mercadoPago;
+*/

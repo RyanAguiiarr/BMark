@@ -4,117 +4,116 @@ const mongoose = require("mongoose");
 const Colaborador = require("../models/colaborador");
 const SalaoColaborador = require("../models/relacionamentos/salaoColaborador");
 const colaboradorServico = require("../models/relacionamentos/colaboradorServico");
-const mercadoPago = require("../services/mercadoPago"); // Alterado para Mercado Pago
 
 router.post("/", async (req, res) => {
   const db = mongoose.connection;
-  const session = await db.startSession(); // Abrindo uma sessão no banco de dados
+  const session = await db.startSession(); // Inicia uma sessão no banco de dados
   session.startTransaction();
 
-  console.log("o que estou mandando no req.body:",req.body)
-
+  console.log("Dados recebidos no req.body:", req.body);
 
   try {
     const { colaborador, salaoId } = req.body;
 
-    // Verificar se o colaborador já existe
+    // Verifica se o colaborador já existe no banco de dados
     const colaboradorExistente = await Colaborador.findOne({
       $or: [{ email: colaborador.email }, { telefone: colaborador.telefone }],
     });
 
-    // Se não existir, cria um novo colaborador
+    let novoColaborador;
+
+    // Se o colaborador não existir, cria um novo registro no banco de dados
     if (!colaboradorExistente) {
-      // Criar um cliente no Mercado Pago (substituindo a criação de conta bancária)
-      const mpCustomer = await mercadoPago.createBankAccount({
-        email: colaborador.email,
-        first_name: colaborador.nome,
-        last_name: colaborador.sobrenome,
-        phone: { area_code: "55", number: colaborador.telefone },
-        identification: { type: "CPF", number: colaborador.cpf },
-        address: {
-          street_name: colaborador.endereco.rua,
-          street_number: colaborador.endereco.numero,
-          zip_code: colaborador.endereco.cep,
-        },
-      });
-
-
-      if (mpCustomer.error) {
-        console.log(mpCustomer)
-        throw new Error(`Erro ao criar cliente: ${mpCustomer.message}`);
-      }
-
-      // Criar recebedor (caso seja necessário para dividir pagamentos)
-      const recipient = await mercadoPago.createRecipient({
-        email: colaborador.email,
-        description: `Conta de recebimento para ${colaborador.nome}`,
-      });
-
-      if (recipient.error) {
-        throw new Error(`Erro ao criar recebedor: ${recipient.message}`);
-      }
-
-      // Salvar no banco de dados
-      const novoColaborador = new Colaborador({
+      novoColaborador = new Colaborador({
         nome: colaborador.nome,
         email: colaborador.email,
         telefone: colaborador.telefone,
         cpf: colaborador.cpf,
-        mercadoPagoId: mpCustomer.data.id, // ID do cliente no Mercado Pago
+        dataNascimento: colaborador.dataNascimento,
+        sexo: colaborador.sexo,
+        foto: colaborador.foto,
+        status: colaborador.status,
       });
 
       await novoColaborador.save({ session });
+    }
 
-      // RELACIONAMENTO
-      const colaboradorId = colaboradorExistente
+    // Obtém o ID do colaborador, seja o existente ou o recém-criado
+    const colaboradorId = colaboradorExistente
       ? colaboradorExistente._id
       : novoColaborador._id;
-      
-      // VERIFICAR SE JA EXISTE O RELACIONAMENTO COM O SALAO
-      const relacionamentoExistente = await SalaoColaborador.findOne({
-        salaoId,
-        colaboradorId,
-        status: {$ne: "E"}
-      });
-      
-       // SE NAO ESTIVER VINCULADIO COM O SALAO
 
-       if(!relacionamentoExistente){
-        await new SalaoColaborador({salaoId, colaboradorId}).save({session})
-       }
+    // Verifica se já existe um relacionamento entre o salão e o colaborador
+    const relacionamentoExistente = await SalaoColaborador.findOne({
+      salaoId,
+      colaboradorId,
+      status: { $ne: "E" }, // Ignora relacionamentos excluídos
+    });
 
-       // SE JA EXISTIR UM VINCULO ENTRE O SALAO E O COLABORADOR
-        if(relacionamentoExistente){
-        await SalaoColaborador.findOneAndUpdate({
-                salaoId,
-                colaboradorId,
-            }, {status: "A"}, {session})
-        }
-
-        // RELACIONAMENTO ENTRE COLABORADOR E SERVICO
-        await colaboradorServico.insertMany(
-          colaborador.servicos.map((servicoId) => ({
-            servicoId,
-            colaboradorId
-          }), {session})
-        )
-
-      await session.commitTransaction();
-      session.endSession();
-
-      if(colaboradorExistente && relacionamentoExistente){
-        return res.json({ error: true, message: "Colaborador já cadastrado!" });
-      }
-
-      return res.json({ error: false, message: "Colaborador criado com sucesso!" });
-    } else {
-      return res.json({ error: true, message: "Colaborador já existe!" });
+    // Se não houver vínculo, cria um novo relacionamento
+    if (!relacionamentoExistente) {
+      await new SalaoColaborador({ salaoId, colaboradorId }).save({ session });
     }
+
+    // Se o colaborador já estava vinculado ao salão mas inativo, ativa o vínculo
+    if (relacionamentoExistente) {
+      await SalaoColaborador.findOneAndUpdate(
+        { salaoId, colaboradorId },
+        { status: "A" },
+        { session }
+      );
+    }
+
+    // Relacionamento entre colaborador e serviços prestados
+    await colaboradorServico.insertMany(
+      colaborador.servicos.map((servicoId) => ({
+        servicoId,
+        colaboradorId,
+      })),
+      { session }
+    );
+
+    await session.commitTransaction(); // Confirma as operações no banco de dados
+    session.endSession();
+
+    // Retorna mensagem de sucesso ou aviso de cadastro já existente
+    if (colaboradorExistente && relacionamentoExistente) {
+      return res.json({ error: true, message: "Colaborador já cadastrado!" });
+    }
+
+    return res.json({ error: false, message: "Colaborador criado com sucesso!" });
   } catch (err) {
-    await session.abortTransaction();
+    await session.abortTransaction(); // Cancela as operações em caso de erro
     session.endSession();
     res.json({ error: true, message: err.message });
   }
 });
+
+router.put("/:colaboradorId", async (req, res) => {
+  try {
+    const { vinculo, viculoId, especialidade } = req.body;
+    const { colaboradorId } = req.params;
+
+    // VINCULO
+    await SalaoColaborador.findOneAndUpdate(viculoId, {status: vinculo})
+
+    // ESPECIALIDADE
+    // DELETA TODAS AS ESPECIALIDADES
+    await colaboradorServico.deleteMany({colaboradorId})
+
+    // ADICIONA NOVAS ESPECIALIDADES
+    await colaboradorServico.insertMany(
+      especialidade.map((servicoId) => ({
+        servicoId,
+        colaboradorId,
+      }))
+    )
+
+    res.json({ error: false, message: "Colaborador atualizado com sucesso!" });
+    
+  } catch (err) {
+    res.json({ error: true, message: err.message });
+  }
+})
 
 module.exports = router;
