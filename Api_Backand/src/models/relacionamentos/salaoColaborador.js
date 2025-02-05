@@ -3,19 +3,19 @@ const Schema = mongoose.Schema
 
 const salaoColaborador = new Schema({
     salaoId: {
-        type: mongoose.Tipes.ObjectId,
+        type: mongoose.Types.ObjectId,
         ref: "Salao",
         required: true
     },
     colaboradorId:
         {
-        type: mongoose.Tipes.ObjectId,
+        type: mongoose.Types.ObjectId,
         ref: "Colaborador",
         required: true
     },
     status: {
         type: String, 
-        enum: ["A", "I"],
+        enum: ["A", "I", "E"],
         required: true,
         default: "A"
     },

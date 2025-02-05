@@ -6,6 +6,14 @@ const colaborador = new Schema({
         type: String,
         required: true
    },
+   sobrenome: {
+    type: String,
+    required: true
+},
+cpf: {
+    type: String,
+    required: true
+},
     telefone: {
         type: String,
         required: true
@@ -37,32 +45,16 @@ const colaborador = new Schema({
     required: true,
     default: "A"
    },
-   contaBancaria: {
-    titular: {
-        type: String,
-        required: true
-    },
-    cpfCnpj: {
-        type: String,
-        required: true
-    },
-    banco: {
-        type: String,
-        required: true
-    },
-    tipo: {
-        type: String,
-        required: true
-    },
-    agencia: {
+   endereco: {
+    rua: {
         type: String,
         required: true
     },
     numero: {
-        type: String,
+        type: Number,
         required: true
     },
-    dv: {
+    cep: {
         type: String,
         required: true
     },
