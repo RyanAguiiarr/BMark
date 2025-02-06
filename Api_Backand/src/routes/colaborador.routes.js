@@ -5,9 +5,10 @@ const Colaborador = require("../models/colaborador");
 const SalaoColaborador = require("../models/relacionamentos/salaoColaborador");
 const colaboradorServico = require("../models/relacionamentos/colaboradorServico");
 
+// Criar ou Vincular um Colaborador a um Salão
 router.post("/", async (req, res) => {
   const db = mongoose.connection;
-  const session = await db.startSession(); // Inicia uma sessão no banco de dados
+  const session = await db.startSession(); // Inicia uma sessão e transação no banco para garantir que todas as operações ocorram corretamente.
   session.startTransaction();
 
   console.log("Dados recebidos no req.body:", req.body);
@@ -15,7 +16,7 @@ router.post("/", async (req, res) => {
   try {
     const { colaborador, salaoId } = req.body;
 
-    // Verifica se o colaborador já existe no banco de dados
+    // Verifica se o colaborador já existe no banco usando o e-mail ou telefone.
     const colaboradorExistente = await Colaborador.findOne({
       $or: [{ email: colaborador.email }, { telefone: colaborador.telefone }],
     });
@@ -89,19 +90,22 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Atualizar informações de um Colaborador
 router.put("/:colaboradorId", async (req, res) => {
   try {
     const { vinculo, viculoId, especialidade } = req.body;
+    //Recebe o colaboradorId como parâmetro na URL.
     const { colaboradorId } = req.params;
 
     // VINCULO
+    //Atualiza o status do vínculo do colaborador com o salão, por exemplo, ativo ou inativo.
     await SalaoColaborador.findOneAndUpdate(viculoId, {status: vinculo})
 
     // ESPECIALIDADE
-    // DELETA TODAS AS ESPECIALIDADES
+    // Remove todas as especialidades existentes associadas ao colaborador.
     await colaboradorServico.deleteMany({colaboradorId})
 
-    // ADICIONA NOVAS ESPECIALIDADES
+    // Adiciona novas especialidades ao colaborador.
     await colaboradorServico.insertMany(
       especialidade.map((servicoId) => ({
         servicoId,
@@ -111,6 +115,74 @@ router.put("/:colaboradorId", async (req, res) => {
 
     res.json({ error: false, message: "Colaborador atualizado com sucesso!" });
     
+  } catch (err) {
+    res.json({ error: true, message: err.message });
+  }
+})
+
+// Excluir Vínculo de um Colaborador
+router.delete("/vinculo/:id", async (req, res) => {
+  try {
+    // Não exclui o colaborador do banco de dados, apenas altera o status do vínculo.
+    // Evita perda de dados, pois o vínculo pode ser restaurado futuramente.
+    await SalaoColaborador.findByIdAndUpdate(req.params.id, { status: "E" });
+    res.json({ error: false, message: "Colaborador excluido com sucesso!" });
+  } catch (err) {
+    res.json({ error: true, message: err.message });
+  }
+})
+
+// Filtrar Colaboradores
+router.post("/filter", async (req, res) => {
+  try {
+    // Os filtros são enviados no corpo da requisição (req.body.filters).
+    // Usa o find() para buscar colaboradores no banco de dados.
+    // Retorna uma lista de colaboradores que correspondem aos filtros aplicados.
+    const colaboradores = await Colaborador.find(req.body.filters);
+    res.json({error: false, colaboradores });
+  } catch (err) {
+    res.json({ error: true, message: err.message });
+  }
+})
+
+// Listar Colaboradores de um Salão
+router.get("/salao/:salaoId", async (req, res) => {
+  try {
+    // Recebe o salaoId como parâmetro da URL.
+    const {salaoId} = req.params
+    let listaColaboradores = []
+
+    // RECUPERAR VINCULOS
+    // Busca todos os vínculos ativos (status !== "E") entre o salão e os colaboradores.
+    // Popula os dados do colaborador associado ao vínculo.
+    const salaoColaboradores = await SalaoColaborador.find({
+      salaoId, 
+      status: {$ne: "E"}
+    }).populate("colaboradorId").select("colaboradorId dataCadastro status")
+
+    // Para cada colaborador, busca suas especialidades.
+    for (let vinculo of salaoColaboradores) {
+      const especialidades = await colaboradorServico.find({
+        colaboradorId: vinculo.colaboradorId._id
+      });
+      // Monta uma resposta estruturada contendo os dados do colaborador, vínculo, status e especialidades.
+      listaColaboradores.push({
+        ...vinculo._doc,
+        especialidades: especialidades
+      });
+    }
+
+    // Retorna a lista formatada de colaboradores vinculados ao salão.
+    res.json({
+       error: false,
+        colaboradores: listaColaboradores.map((vinculo) => ({
+          ...vinculo.colaboradorId._doc,
+          vinculoId: vinculo._id,
+          vinculo: vinculo.status,
+          especialidades: vinculo.especialidades,
+          dataCadastro: vinculo.dataCadastro
+        }))
+      });
   } catch (err) {
     res.json({ error: true, message: err.message });
   }
