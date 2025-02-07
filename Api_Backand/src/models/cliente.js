@@ -37,17 +37,10 @@ const cliente = new Schema({
     required: true,
     default: "A"
    },
-   documento: {
-    tipo: {
-        type: String,
-        enum: ["cpf", "cnpj"],
-        required: true
-    },
-    numero: {
-        type: String,
-        required: true
-    },
-   },
+   cpf: {
+    type: String,
+    required: true
+},
    endereco: {
     cidade: String,
     uf: String,
