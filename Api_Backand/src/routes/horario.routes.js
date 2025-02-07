@@ -1,9 +1,10 @@
 const express = require("express")
 const router = express.Router()
+const _ = require("lodash")
 const Horario = require("../models/horario");
 const colaboradorServico = require("../models/relacionamentos/colaboradorServico");
 
-
+// Criar um Horário
 router.post("/", async (req, res) => {
     try {
         const horario = await new Horario(req.body).save()
@@ -13,11 +14,12 @@ router.post("/", async (req, res) => {
     }
 })
 
+// Retorna todos os horários de um determinado salão.
 router.get("/salao/:salaoId", async (req, res) => {
     try {
         const {salaoId} = req.params
 
-        const horarios = horario.find({salaoId})
+        const horarios = await Horario.find({salaoId})
 
         res.json({horarios})
     } catch (err) {
@@ -25,6 +27,7 @@ router.get("/salao/:salaoId", async (req, res) => {
     }
 })
 
+// Atualiza um horário existente com os novos dados enviados no corpo da requisição.
 router.put("/:horarioId", async (req, res) => {
     try {
         const {horarioId} = req.params
@@ -38,6 +41,7 @@ router.put("/:horarioId", async (req, res) => {
     }
 })
 
+// Remove um horário do banco de dados pelo ID.
 router.delete("/:horarioId", async (req, res) => {
     try {
         const {horarioId} = req.params
@@ -50,6 +54,7 @@ router.delete("/:horarioId", async (req, res) => {
     }
 })
 
+// Retorna uma lista de colaboradores que possuem as especialidades especificadas no corpo da requisição.
 router.post("/colaboradores", async (req, res) => {
     try {
        const ColaboradorServico = await colaboradorServico.find({
@@ -57,7 +62,8 @@ router.post("/colaboradores", async (req, res) => {
         status: "A"
        }).populate("colaboradorId", "nome").select("colaboradorId -_id")
 
-       const listaColaboradores = ColaboradorServico.map((vinculo) => ({
+       const listaColaboradores =
+       _.uniqBy(ColaboradorServico, (vinculo) => vinculo.colaboradorId._id.toString()).map((vinculo) => ({
         label: vinculo.colaboradorId._id,
         value: vinculo.colaboradorId.nome
        }))

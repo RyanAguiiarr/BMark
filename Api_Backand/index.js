@@ -20,6 +20,7 @@ app.use("/salao", require("./src/routes/salao.routes"))
 app.use("/servico", require("./src/routes/servico.routes"))
 app.use("/horario", require("./src/routes/horario.routes"))
 app.use("/colaborador", require("./src/routes/colaborador.routes"))
+app.use("/cliente", require("./src/routes/cliente.routes"))
 
 app.listen(port, () => {
     console.log(`backand escutando na porta ${port}`)
