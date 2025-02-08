@@ -1,7 +1,5 @@
 const express = require("express")
 const router = express.Router()
-const Cliente = require("../models/cliente")
-const SalaoCliente = require("../models/relacionamentos/salaoCliente")
 const mongoose = require("mongoose");
 
 router.post("/", async (req, res) => {
@@ -15,36 +13,35 @@ router.post("/", async (req, res) => {
       const { cliente, salaoId } = req.body;
   
       // Verifica se o cliente já existe no banco usando o e-mail ou telefone.
-      const clienteExistente = await Cliente.findOne({
+      const clienteExistente = await cliente.findOne({
         $or: [{ email: cliente.email }, { telefone: cliente.telefone }],
       });
   
-      let novoCliente;
+      let novocliente;
   
       // Se o cliente não existir, cria um novo registro no banco de dados
       if (!clienteExistente) {
-        novoCliente = new Cliente({
+        novocliente = new cliente({
           nome: cliente.nome,
           email: cliente.email,
           telefone: cliente.telefone,
           cpf: cliente.cpf,
           dataNascimento: cliente.dataNascimento,
           sexo: cliente.sexo,
-          senha: cliente.senha,
           foto: cliente.foto,
           status: cliente.status,
         });
   
-        await novoCliente.save({ session });
+        await novocliente.save({ session });
       }
   
       // Obtém o ID do cliente, seja o existente ou o recém-criado
       const clienteId = clienteExistente
         ? clienteExistente._id
-        : novoCliente._id;
+        : novocliente._id;
   
       // Verifica se já existe um relacionamento entre o salão e o cliente
-      const relacionamentoExistente = await SalaoCliente.findOne({
+      const relacionamentoExistente = await Salaocliente.findOne({
         salaoId,
         clienteId,
         status: { $ne: "E" }, // Ignora relacionamentos excluídos
@@ -52,17 +49,26 @@ router.post("/", async (req, res) => {
   
       // Se não houver vínculo, cria um novo relacionamento
       if (!relacionamentoExistente) {
-        await new SalaoCliente({ salaoId, clienteId }).save({ session });
+        await new Salaocliente({ salaoId, clienteId }).save({ session });
       }
   
       // Se o cliente já estava vinculado ao salão mas inativo, ativa o vínculo
       if (relacionamentoExistente) {
-        await SalaoCliente.findOneAndUpdate(
+        await Salaocliente.findOneAndUpdate(
           { salaoId, clienteId },
           { status: "A" },
           { session }
         );
       }
+  
+      // Relacionamento entre cliente e serviços prestados
+      await clienteServico.insertMany(
+        cliente.servicos.map((servicoId) => ({
+          servicoId,
+          clienteId,
+        })),
+        { session }
+      );
   
       await session.commitTransaction(); // Confirma as operações no banco de dados
       session.endSession();
@@ -79,59 +85,5 @@ router.post("/", async (req, res) => {
       res.json({ error: true, message: err.message });
     }
   });
-
-// Filtrar clientes
-router.post("/filter", async (req, res) => {
-  try {
-    // Os filtros são enviados no corpo da requisição (req.body.filters).
-    // Usa o find() para buscar clientes no banco de dados.
-    // Retorna uma lista de clientes que correspondem aos filtros aplicados.
-    const clientes = await Cliente.find(req.body.filters);
-    res.json({error: false, clientes });
-  } catch (err) {
-    res.json({ error: true, message: err.message });
-  }
-})
-
-// Listar clientes de um Salão
-router.get("/salao/:salaoId", async (req, res) => {
-  try {
-    // Recebe o salaoId como parâmetro da URL.
-    const {salaoId} = req.params
-
-    // RECUPERAR VINCULOS
-    // Busca todos os vínculos ativos (status !== "E") entre o salão e os clientes.
-    // Popula os dados do cliente associado ao vínculo.
-    const salaoclientes = await SalaoCliente.find({
-      salaoId, 
-      status: {$ne: "E"}
-    }).populate("clienteId").select("clienteId dataCadastro status")
-
-    // Retorna a lista formatada de clientes vinculados ao salão.
-    res.json({
-       error: false,
-        clientes: salaoclientes.map((vinculo) => ({
-          ...vinculo.clienteId._doc,
-          vinculoId: vinculo._id,
-          vinculo: vinculo.status,
-          dataCadastro: vinculo.dataCadastro
-        }))
-      });
-  } catch (err) {
-    res.json({ error: true, message: err.message });
-  }
-})
-
-// Excluir Vínculo de um cliente
-router.delete("/vinculo/:id", async (req, res) => {
-  try {
-    // Não exclui o cliente do banco de dados, apenas altera o status do vínculo.
-    // Evita perda de dados, pois o vínculo pode ser restaurado futuramente.
-    await SalaoCliente.findByIdAndUpdate(req.params.id, { status: "E" });
-    res.json({ error: false, message: "cliente excluido com sucesso!" });
-  } catch (err) {
-    res.json({ error: true, message: err.message });
-  }
-})
 
 module.exports = router
