@@ -3,13 +3,13 @@ const Schema = mongoose.Schema
 
 const salaoCliente = new Schema({
     salaoId: {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Tipes.ObjectId,
         ref: "Salao",
         required: true
     },
     clienteId: 
         {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Tipes.ObjectId,
         ref: "Cliente",
         required: true
     },

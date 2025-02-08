@@ -3,37 +3,42 @@ const Schema = mongoose.Schema
 
 const agendamento = new Schema({
     salaoId: {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Tipes.ObjectId,
         ref: "Salao",
         required: true
     },
     clienteId: 
         {
-        type: mongoose.Types.ObjectId,
+        type: mongoose.Tipes.ObjectId,
         ref: "Cliente",
         required: true
     },
-    colaboradorId: 
+    colaboradorid: 
     {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Tipes.ObjectId,
     ref: "Colaborador",
-    required: true,
+    required: true
     },
     servicoId: 
     {
-    type: mongoose.Types.ObjectId,
+    type: mongoose.Tipes.ObjectId,
     ref: "Servico",
     required: true
     },
     data: {
         type: Date,
-        default: Date.now,
+        required: true
     },
     comissao: {
         type: Number,
+        required: true
     },
     valor: {
         type: Number,
+        required: true
+    },
+    transactionId: {
+        type: String,
         required: true
     },
     dataCadastro: {

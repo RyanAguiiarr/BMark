@@ -10,8 +10,9 @@ router.post("/", async (req, res) => {
     console.log("Dados recebidos no req.body:", req.body);
   
     try {
-      const { cliente, salaoId } = req.body;
+      const { colaborador, salaoId } = req.body;
   
+<<<<<<< HEAD
       // Verifica se o cliente já existe no banco usando o e-mail ou telefone.
       const clienteExistente = await cliente.findOne({
         $or: [{ email: cliente.email }, { telefone: cliente.telefone }],
@@ -42,30 +43,79 @@ router.post("/", async (req, res) => {
   
       // Verifica se já existe um relacionamento entre o salão e o cliente
       const relacionamentoExistente = await Salaocliente.findOne({
+=======
+      // Verifica se o colaborador já existe no banco usando o e-mail ou telefone.
+      const colaboradorExistente = await Colaborador.findOne({
+        $or: [{ email: colaborador.email }, { telefone: colaborador.telefone }],
+      });
+  
+      let novoColaborador;
+  
+      // Se o colaborador não existir, cria um novo registro no banco de dados
+      if (!colaboradorExistente) {
+        novoColaborador = new Colaborador({
+          nome: colaborador.nome,
+          email: colaborador.email,
+          telefone: colaborador.telefone,
+          cpf: colaborador.cpf,
+          dataNascimento: colaborador.dataNascimento,
+          sexo: colaborador.sexo,
+          foto: colaborador.foto,
+          status: colaborador.status,
+        });
+  
+        await novoColaborador.save({ session });
+      }
+  
+      // Obtém o ID do colaborador, seja o existente ou o recém-criado
+      const colaboradorId = colaboradorExistente
+        ? colaboradorExistente._id
+        : novoColaborador._id;
+  
+      // Verifica se já existe um relacionamento entre o salão e o colaborador
+      const relacionamentoExistente = await SalaoColaborador.findOne({
+>>>>>>> parent of e564eee (terminando rotas clientes)
         salaoId,
-        clienteId,
+        colaboradorId,
         status: { $ne: "E" }, // Ignora relacionamentos excluídos
       });
   
       // Se não houver vínculo, cria um novo relacionamento
       if (!relacionamentoExistente) {
+<<<<<<< HEAD
         await new Salaocliente({ salaoId, clienteId }).save({ session });
+=======
+        await new SalaoColaborador({ salaoId, colaboradorId }).save({ session });
+>>>>>>> parent of e564eee (terminando rotas clientes)
       }
   
-      // Se o cliente já estava vinculado ao salão mas inativo, ativa o vínculo
+      // Se o colaborador já estava vinculado ao salão mas inativo, ativa o vínculo
       if (relacionamentoExistente) {
+<<<<<<< HEAD
         await Salaocliente.findOneAndUpdate(
           { salaoId, clienteId },
+=======
+        await SalaoColaborador.findOneAndUpdate(
+          { salaoId, colaboradorId },
+>>>>>>> parent of e564eee (terminando rotas clientes)
           { status: "A" },
           { session }
         );
       }
   
+<<<<<<< HEAD
       // Relacionamento entre cliente e serviços prestados
       await clienteServico.insertMany(
         cliente.servicos.map((servicoId) => ({
           servicoId,
           clienteId,
+=======
+      // Relacionamento entre colaborador e serviços prestados
+      await colaboradorServico.insertMany(
+        colaborador.servicos.map((servicoId) => ({
+          servicoId,
+          colaboradorId,
+>>>>>>> parent of e564eee (terminando rotas clientes)
         })),
         { session }
       );
@@ -74,11 +124,11 @@ router.post("/", async (req, res) => {
       session.endSession();
   
       // Retorna mensagem de sucesso ou aviso de cadastro já existente
-      if (clienteExistente && relacionamentoExistente) {
-        return res.json({ error: true, message: "cliente já cadastrado!" });
+      if (colaboradorExistente && relacionamentoExistente) {
+        return res.json({ error: true, message: "Colaborador já cadastrado!" });
       }
   
-      return res.json({ error: false, message: "cliente criado com sucesso!" });
+      return res.json({ error: false, message: "Colaborador criado com sucesso!" });
     } catch (err) {
       await session.abortTransaction(); // Cancela as operações em caso de erro
       session.endSession();
