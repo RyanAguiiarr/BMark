@@ -8,6 +8,6 @@ const URI = process.env.URI
 
 mongoose.connect(URI).then(() => {
     console.log("conectado ao MongoBD")
-}).catch(() => {
+}).catch((err) => {
     console.log("banco de dados nao conectado", err)
 })
