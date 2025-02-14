@@ -84,8 +84,17 @@ router.post("/filter", async (req, res) => {
 router.post("/dias-disponiveis", async (req, res) => {
   try {
    const {data, salaoId, servicoId} = req.body
-   const horarios = await Agendamento.find({salaoId})
+   const horarios = await Horario.find({salaoId})
    const servico = await Servico.findById(servicoId).select("duracao")
+
+   let agenda = []
+   let ultimoDia = moment(data)
+
+   // DURAÇÃO DO SERVIÇO
+   const servicoMinutos = util.hourToMinutes(moment(servico.duracao).format("HH:mm"))
+
+   console.log("minutos:", servicoMinutos)
+   res.json({ error: false, servicoMinutos })
   } catch (err) {
    res.json({ error: true, message: err.message });
  }
