@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const moment = require("moment");
+const moment = require('moment');
 const _ = require('lodash');
 const mongoose = require("mongoose");
 const Cliente = require("../models/cliente");
@@ -85,38 +85,40 @@ router.post("/filter", async (req, res) => {
 router.post('/dias-disponiveis', async (req, res) => {
   try {
     const { data, salaoId, servicoId } = req.body;
+    
+    // Buscar os horários disponíveis do salão
     const horarios = await Horario.find({ salaoId });
+    
+    // Buscar a duração do serviço
     const servico = await Servico.findById(servicoId).select('duracao');
+    
     let colaboradores = [];
-
     let agenda = [];
     let lastDay = moment(data);
 
-    // DURAÇÃO DO SERVIÇO
-    const servicoDuracao = util.hourToMinutes(
-      moment(servico.duracao).format('HH:mm')
-    );
+    // Converter duração do serviço para minutos
+    const servicoDuracao = moment.duration(servico.duracao, 'minutes').asMinutes();
+    
+    // Determinar a quantidade de slots necessários para atender a duração do serviço
     const servicoDuracaoSlots = util.sliceMinutes(
-      moment(servico.duracao),
-      moment(servico.duracao).add(servicoDuracao, 'minutes'),
+      moment().startOf('day'),
+      moment().startOf('day').add(servicoDuracao, 'minutes'),
       util.SLOT_DURATION,
       false
     ).length;
 
     for (let i = 0; i <= 365 && agenda.length <= 7; i++) {
+      // Filtrar horários disponíveis para o dia atual
       const espacosValidos = horarios.filter((h) => {
-        // VERIFICAR DIA DA SEMANA
-        const diaSemanaDisponivel = h.dias.includes(moment(lastDay).day());
-
-        // VERIFICAR ESPECIALIDADE DISPONÍVEL
-        const servicosDisponiveis = h.especialidades.includes(servicoId);
-
+        const diaSemanaDisponivel = h.dias.includes(moment(lastDay).isoWeekday());
+        const servicosDisponiveis = h.especialidades.map(id => id.toString()).includes(servicoId.toString());
         return diaSemanaDisponivel && servicosDisponiveis;
       });
-
+      
       if (espacosValidos.length > 0) {
-        // TODOS OS HORÁRIOS DISPONÍVEIS DAQUELE DIA
         let todosHorariosDia = {};
+        
+        // Organizar horários disponíveis por colaborador
         for (let espaco of espacosValidos) {
           for (let colaborador of espaco.colaboradores) {
             if (!todosHorariosDia[colaborador._id]) {
@@ -133,9 +135,8 @@ router.post('/dias-disponiveis', async (req, res) => {
           }
         }
 
-        // SE TODOS OS ESPECIALISTAS DISPONÍVEIS ESTIVEREM OCUPADOS NO HORÁRIO, REMOVER
+        // Verificar agenda de cada colaborador para remover horários ocupados
         for (let colaboradorKey of Object.keys(todosHorariosDia)) {
-          // LER AGENDAMENTOS DAQUELE ESPECIALISTA NAQUELE DIA
           const agendamentos = await Agendamento.find({
             colaboradorId: colaboradorKey,
             data: {
@@ -144,80 +145,56 @@ router.post('/dias-disponiveis', async (req, res) => {
             },
           }).select('data -_id');
 
-          // RECUPERANDO HORÁRIOS OCUPADOS
-          let horariosOcupado = agendamentos.map((a) => ({
-            inicio: moment(a.data),
-            fim: moment(a.data).add(servicoDuracao, 'minutes'),
-          }));
+          let horariosOcupado = _.flatten(
+            agendamentos.map((a) => {
+              const inicio = moment(a.data); 
+              const fim = moment(a.data).add(servicoDuracao, 'minutes');
+              return util.sliceMinutes(inicio, fim, util.SLOT_DURATION, false);
+            })
+          );
+          
+          console.log("Horários ocupados processados para colaborador", colaboradorKey, ":", horariosOcupado);
+          
+          
+console.log('Horários ocupados:', horariosOcupado);
 
-          horariosOcupado = horariosOcupado
-            .map((h) =>
-              util.sliceMinutes(h.inicio, h.fim, util.SLOT_DURATION, false)
-            )
-            .flat();
-
-          // REMOVENDO TODOS OS HORÁRIOS QUE ESTÃO OCUPADOS
-let horariosLivres = util.splitByValue(
-  _.uniq(
-    todosHorariosDia[colaboradorKey].map((h) => {
-      return horariosOcupado.includes(h) ? '-' : h;
-    })
-  ),
-  '-'
-);
-
-// VERIFICANDO SE NOS HORÁRIOS CONTINUOS EXISTE SPAÇO SUFICIENTE NO SLOT
-horariosLivres = horariosLivres
-  .filter((h) => h.length >= servicoDuracaoSlots)
-  .flat();
-
-// Verifique se horariosLivres é um array
-if (!Array.isArray(horariosLivres)) {
-  horariosLivres = [];
-}
-
-/* VERIFICANDO OS HORÁRIOS DENTRO DO SLOT 
-  QUE TENHAM A CONTINUIDADE NECESSÁRIA DO SERVIÇO
-*/
-horariosLivres = horariosLivres.map((slot) => {
-  if (Array.isArray(slot)) {
-    return slot.filter(
-      (horario, index) => slot.length - index >= servicoDuracaoSlots
-    );
-  }
-  return []; // Retorna um array vazio se slot não for um array
-});
-
-// SEPARANDO 2 EM 2
-horariosLivres = _.chunk(horariosLivres, 2);
-
-          // REMOVENDO O COLABORADOR DO DIA, CASO NÃO TENHA ESPAÇOS NA AGENDA
+          // Filtrar horários livres
+          let horariosLivres = todosHorariosDia[colaboradorKey].filter(hLivre => {
+            const hLivreMoment = moment(hLivre); 
+            return !horariosOcupado.some(hOcupado => hLivreMoment.isSame(hOcupado));
+          });
+          
+          console.log("Horários livres depois do filtro para colaborador", colaboradorKey, ":", horariosLivres);
+          
+          
+          
+          // Verificar continuidade de horários disponíveis para atender a duração do serviço
+          horariosLivres = _.chunk(horariosLivres, servicoDuracaoSlots).filter(slot => slot.length === servicoDuracaoSlots);
+          
           if (horariosLivres.length === 0) {
-            todosHorariosDia = _.omit(todosHorariosDia, colaboradorKey);
+            delete todosHorariosDia[colaboradorKey];
           } else {
             todosHorariosDia[colaboradorKey] = horariosLivres;
           }
         }
 
-        // VERIFICANDO SE TEM ESPECIALISTA COMA AGENDA NAQUELE DIA
-        const totalColaboradores = Object.keys(todosHorariosDia).length;
-
-        if (totalColaboradores > 0) {
-          colaboradores.push(Object.keys(todosHorariosDia));
-          console.log(todosHorariosDia);
+        // Se ainda houver colaboradores disponíveis no dia, adicionar ao resultado
+        if (Object.keys(todosHorariosDia).length > 0) {
+          colaboradores.push(...Object.keys(todosHorariosDia));
           agenda.push({
             [moment(lastDay).format('YYYY-MM-DD')]: todosHorariosDia,
           });
         }
       }
-
       lastDay = moment(lastDay).add(1, 'day');
     }
 
+    // Buscar informações dos colaboradores disponíveis
     colaboradores = await Colaborador.find({
-      _id: { $in: _.uniq(colaboradores.flat()) },
+      _id: { $in: _.uniq(colaboradores) },
     }).select('nome foto');
 
+    // Formatar nomes para exibir apenas o primeiro nome
     colaboradores = colaboradores.map((c) => ({
       ...c._doc,
       nome: c.nome.split(' ')[0],
@@ -225,10 +202,9 @@ horariosLivres = _.chunk(horariosLivres, 2);
 
     res.json({ error: false, colaboradores, agenda });
   } catch (err) {
-   res.json({ error: true, message: err.message });
- }
-})
-
+    res.json({ error: true, message: err.message });
+  }
+});
 
 
 module.exports = router
