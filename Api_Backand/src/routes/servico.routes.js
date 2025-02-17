@@ -45,7 +45,7 @@ router.post("/", (req, res) => {
 
     try {
       console.log("🔍 Recebido no req.body:", req.body);
-      
+
       if (!req.body.servico) {
         console.error("Erro: Campo 'servico' não foi enviado.");
         return res.status(400).json({ error: true, message: "Campo 'servico' é obrigatório." });
@@ -53,8 +53,15 @@ router.post("/", (req, res) => {
 
       let jsonServico;
       try {
-        // json enviado na requisição (body)
-        jsonServico = JSON.parse(req.body.servico);
+        // Se req.body.servico for uma string, tenta converter para JSON
+        if (typeof req.body.servico === "string") {
+          jsonServico = JSON.parse(req.body.servico);
+        } else if (typeof req.body.servico === "object") {
+          // Se já for um objeto, usa diretamente
+          jsonServico = req.body.servico;
+        } else {
+          throw new Error("Formato inválido de serviço.");
+        }
         console.log("✅ JSON do serviço:", jsonServico);
       } catch (error) {
         console.error("Erro ao converter JSON:", error.message);
@@ -62,7 +69,6 @@ router.post("/", (req, res) => {
       }
 
       const requiredFields = ["descricao", "recorrencia", "duracao", "comissao", "preco", "titulo", "salaoId"];
-      // Se algum campo obrigatório estiver faltando, retorna um erro 400.
       for (const field of requiredFields) {
         if (!jsonServico[field]) {
           console.error(`Erro: Campo '${field}' está faltando.`);
@@ -70,25 +76,27 @@ router.post("/", (req, res) => {
         }
       }
 
-      // Adiciona o salaoId ao objeto jsonServico.
-      jsonServico.salaoId = req.body.salaoId;
+      // Cria o serviço
       const servico = await new Servico(jsonServico).save();
       console.log("✅ Serviço criado com sucesso:", servico);
 
-      // Criar Arquivos associados ao serviço
-      // req.files: Contém os arquivos enviados pelo Multer. Cada arquivo é mapeado para criar um objeto de arquivo.
+      // Verifica se arquivos foram enviados
+      if (!req.files || !Array.isArray(req.files)) {
+        console.error("Nenhum arquivo foi enviado.");
+        return res.status(400).json({ error: true, message: "Nenhum arquivo foi enviado." });
+      }
+
+      // Cria os arquivos associados ao serviço
       const arquivos = req.files.map((file) => ({
         referenciaId: servico._id,
         model: 'Servico',
-        caminho: `servicos/${req.body.salaoId}/${file.filename}`, // Caminho onde o arquivo foi salvo
+        caminho: `servicos/${jsonServico.salaoId}/${file.filename}`,
       }));
 
-      // Salvar os arquivos no MongoDB
-      // Arquivos.insertMany(arquivos): Salva todos os arquivos no MongoDB, associando-os ao serviço.
       await Arquivos.insertMany(arquivos);
       console.log("✅ Arquivos associados ao serviço e salvos com sucesso.");
 
-      res.json({ error: false, servico, arquivos }); // Retornar o serviço e arquivos criados
+      res.json({ error: false, servico, arquivos });
     } catch (err) {
       console.error("❌ Erro ao salvar serviço:", err);
       res.status(500).json({ error: true, message: err.message });

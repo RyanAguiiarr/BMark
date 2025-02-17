@@ -14,7 +14,7 @@ router.post("/", async (req, res) => {
   console.log("Dados recebidos no req.body:", req.body);
 
   try {
-    const { colaborador, salaoId } = req.body;
+    const { colaborador, salaoId } = req.body; 
 
     // Verifica se o colaborador já existe no banco usando o e-mail ou telefone.
     const colaboradorExistente = await Colaborador.findOne({
