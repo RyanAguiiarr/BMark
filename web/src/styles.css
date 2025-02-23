@@ -1,5 +1,99 @@
+:root {
+  --color-primary: #7b2cbf;
+  --color-dark: #21232f;
+  --color-white: #f5f6f7;
+  --color-danger: #d62828;
+  --color-success: #06d6a0;
+}
+
 #root {
   height: 100%;
   width: 100%;
   position: fixed;
+}
+
+header {
+  background-color: var(--color-primary);
+}
+
+header > div {
+  cursor: pointer;
+  trasition: 0.5s;
+  padding: 10px 20px;
+  text-align: right;
+}
+
+header > div:hover {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+header img {
+  width: 50px;
+  border-radius: 100%;
+  margin-left: 15px;
+}
+
+header span:not(.mdi) {
+  margin-bottom: -10px;
+}
+
+headerspan: .mdi {
+  font-size: 20px;
+  margin-left: 10px;
+}
+
+header small {
+  display: block;
+  margin-top: -20px;
+}
+
+sidebar {
+  background-color: var(--color-dark);
+}
+
+sidebar ul li {
+  list-style: none;
+  width: 100%;
+}
+
+sidebar ul li a {
+  color: var(--color-white);
+  width: 100%;
+  opacity: 0.6;
+  display: flex;
+  align-items: center;
+  padding: 5px 0px;
+  margin: 2.5px 0px;
+  transition: 0.5s;
+  border-radius: 5px;
+  text-decoration: none;
+  padding: 10px 5px;
+}
+
+sidebar ul li a.active {
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 1;
+}
+
+sidebar ul li a.active .mdi {
+  color: var(--color-primary);
+}
+
+sidebar ul li a.visited,
+sidebar ul li a:focus {
+  color: var(--color-white);
+}
+
+sidebar ul li a:hover {
+  background-color: rgba(0, 0, 0, 0.6);
+  opacity: 1;
+}
+
+sidebar ul li a span.mdi {
+  font-size: 25px;
+  margin: 0 15px;
+}
+
+sidebar ul li a text {
+  font-size: 14px;
 }

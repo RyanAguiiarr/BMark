@@ -1,4 +1,4 @@
-const moment = require('moment');
+const moment = require("moment");
 
 module.exports = {
   SLOT_DURATION: 30, // MINUTOS
@@ -8,8 +8,8 @@ module.exports = {
     if (horariosDia.length > 0) {
       // VERIFICANDO HORARIOS
       for (let h of horariosDia) {
-        const inicio = moment(moment(h.inicio).format('HH:mm'), 'HH:mm:ss');
-        const fim = moment(moment(h.fim).format('HH:mm'), 'HH:mm:ss');
+        const inicio = moment(moment(h.inicio).format("HH:mm"), "HH:mm:ss");
+        const fim = moment(moment(h.fim).format("HH:mm"), "HH:mm:ss");
         if (moment().isBetween(inicio, fim)) {
           return true;
         }
@@ -19,11 +19,11 @@ module.exports = {
     return false;
   },
   toCents: (price) => {
-    return parseInt(price.toString().replace('.', '').replace(',', ''));
+    return parseInt(price.toString().replace(".", "").replace(",", ""));
   },
   mergeDateTime: (date, time) => {
-    const merged = `${moment(date).format('YYYY-MM-DD')}T${moment(time).format(
-      'HH:mm'
+    const merged = `${moment(date).format("YYYY-MM-DD")}T${moment(time).format(
+      "HH:mm"
     )}`;
     //console.log(merged);
     return merged;
@@ -38,23 +38,23 @@ module.exports = {
 
     while (end > start) {
       if (
-        start.format('YYYY-MM-DD') === now.format('YYYY-MM-DD') &&
+        start.format("YYYY-MM-DD") === now.format("YYYY-MM-DD") &&
         validation
       ) {
         if (start.isAfter(now)) {
-          slices.push(start.format('HH:mm'));
+          slices.push(start.format("HH:mm"));
         }
       } else {
-        slices.push(start.format('HH:mm'));
+        slices.push(start.format("HH:mm"));
       }
 
-      start = start.add(duration, 'minutes');
+      start = start.add(duration, "minutes");
       count++;
     }
     return slices;
   },
   hourToMinutes: (hourMinute) => {
-    const [hour, minutes] = hourMinute.split(':');
+    const [hour, minutes] = hourMinute.split(":");
     return parseInt(parseInt(hour) * 60 + parseInt(minutes));
   },
   splitByValue: (array, value) => {
