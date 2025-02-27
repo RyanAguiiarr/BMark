@@ -4,8 +4,11 @@ import types from "./types";
 import api from "../../../services/api";
 import consts from "../../../consts";
 
-export function* filterAgendamento({ start, end }) {
+export function* filterAgendamento({ payload }) {
+  // ✅ Correção: acessando payload corretamente
   try {
+    const { start, end } = payload; // ✅ Extraindo start e end do payload
+
     const { data: res } = yield call(api.post, "/agendamento/filter", {
       periodo: {
         inicio: start,
@@ -14,16 +17,18 @@ export function* filterAgendamento({ start, end }) {
       salaoId: consts.salaoId,
     });
 
+    console.log("Resposta da API:", res); // ✅ Log para verificar o retorno da API
+
     if (res.error) {
-      console.log(res.message);
-      return false;
+      console.error("Erro ao buscar agendamentos:", res.message); // ✅ Melhor log para erro da API
+      return;
     }
 
-    yield put(updateAgendamento(res.agendamentos));
+    yield put(updateAgendamento(res.agendamentos)); // ✅ Atualiza o Redux com os agendamentos recebidos
   } catch (err) {
-    console.log(err);
+    console.error("Erro no Saga:", err); // ✅ Log de erro
   }
 }
 
-// escuta a action @agendamento/filter e chama a função filterAgendamento
+// Escuta a action FILTER_AGENDAMENTOS e chama a função filterAgendamento
 export default all([takeLatest(types.FILTER_AGENDAMENTOS, filterAgendamento)]);

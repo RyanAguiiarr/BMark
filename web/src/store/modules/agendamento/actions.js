@@ -3,8 +3,7 @@ import types from "./types";
 export function filterAgendamentos({ start, end }) {
   return {
     type: types.FILTER_AGENDAMENTOS,
-    start,
-    end,
+    payload: { start, end }, // ✅ Passar dentro de um objeto
   };
 }
 
