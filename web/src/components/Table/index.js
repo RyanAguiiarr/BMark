@@ -2,9 +2,9 @@ import { Table } from "rsuite";
 
 const { Column, Cell, HeaderCell } = Table;
 
-const TableComponent = ({ data, config, actions }) => {
+const TableComponent = ({ data, config, actions, content, onrowClick }) => {
   return (
-    <Table height={400} data={data}>
+    <Table height={400} data={data} onRowClick={onrowClick}>
       {config.map((column) => (
         <Column
           flexGrow={!column.width ? 1 : 0}
@@ -13,7 +13,11 @@ const TableComponent = ({ data, config, actions }) => {
           fixed={column.fixed}
         >
           <HeaderCell>{column.label}</HeaderCell>
-          <Cell dataKey={column.key} />
+          {!column.content ? (
+            <Cell dataKey={column.key} />
+          ) : (
+            <Cell>{(item) => column.content(item)}</Cell>
+          )}
         </Column>
       ))}
       <Column width={150} fixed="right">
